@@ -33,9 +33,21 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
     selectShape(plant.id);
   }
 
-  const handleDrag = (e) => {
+  const handleDragStart = (e) => {
     setDragged(e.target.id)
     console.log('dragging: ', e.target.id)
+  }
+
+  const handleDragEnd = (e) => {
+    console.log('handling drop')
+    console.log({e})
+    setIsDragging(false)
+    console.log(e.target.attrs)
+    onChange({
+      ...plant,
+      x: Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale),
+      y: Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale),
+    })
   }
 
   const { height, width } = imageData?.fields?.file?.details?.image || {}
@@ -45,7 +57,7 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
       <div 
         id={plant.entityId} 
         draggable={true} 
-        onDragStart={handleDrag} 
+        onDragStart={handleDragStart} 
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -84,16 +96,7 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
       onClick={onSelect}
       onTap={onSelect}
       onDragStart={() => setIsDragging(true)}
-      onDragEnd={(e) => {
-        console.log({e})
-        setIsDragging(false)
-        console.log(e.target.attrs)
-        onChange({
-          ...plant,
-          x: Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale),
-          y: Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale),
-        })
-      }}
+      onDragEnd={(e) => handleDragEnd(e)}
       draggable 
     >
       <PlantShadow

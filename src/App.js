@@ -3,6 +3,8 @@ import { Stage, Layer, Rect } from 'react-konva';
 import useImage from 'use-image';
 import { sortBy } from 'lodash'
 
+import useWindowSize from './lib/useWindowSize'
+
 import Sidebar from './components/Sidebar'
 import Plant from './components/Plant'
 import Grid from './components/Grid'
@@ -32,7 +34,8 @@ const App = () => {
   const [plants, setPlants] = useState([])
   const [plantedItems, setPlantedItems] = useState([])
   const [image] = useImage("http://images.ctfassets.net/1hpnntply6oj/6Iv7x3k7kivzWto60zp2ry/15b722b5557237a95fbef453be0de0d9/bed_map.png");
-  
+  const { height, width } = useWindowSize()
+
   const setSpeciesVarietiesToPlants = (s) => {
     s.fields.varieties.forEach((variety) => {
       const { plantProfile: speciesPlantProfile, ...speciesFields } = s.fields || {}
@@ -89,11 +92,13 @@ const App = () => {
 
   const handleDrop = (e) => {
     e.preventDefault(); 
-    const droppedPlant = {...plants.find((p) => p.entityId === draggedId)}
-    droppedPlant.id = uuid()
-    droppedPlant.x = e.clientX
-    droppedPlant.y = e.clientY
-    setPlantedItems((plantedItems) => sortBy([...plantedItems, droppedPlant], ['y', 'x']))
+    if(e.target.nodeName === 'CANVAS') {
+      const droppedPlant = {...plants.find((p) => p.entityId === draggedId)}
+      droppedPlant.id = uuid()
+      droppedPlant.x = e.clientX
+      droppedPlant.y = e.clientY
+      setPlantedItems((plantedItems) => sortBy([...plantedItems, droppedPlant], ['y', 'x']))
+    }
   }
 
   const bgScale = Math.min(window.innerWidth / image?.width, window.innerHeight / image?.height)
@@ -104,14 +109,14 @@ const App = () => {
       onDrop={handleDrop}
       style={{
         position: 'relative', 
-        width: window.innerWidth, 
-        height: window.innerHeight, 
+        width: width, 
+        height: height, 
         overflow: 'hidden'
       }}
     >
       <Stage
-        width={window.innerWidth}
-        height={window.innerHeight}
+        width={width}
+        height={height}
         onMouseDown={checkDeselect}
         onTouchStart={checkDeselect}
       >
@@ -120,8 +125,8 @@ const App = () => {
             <Rect
               x={0}
               y={0}
-              width={window.innerWidth}
-              height={window.innerWidth}
+              width={width}
+              height={height}
               fillPatternRepeat="no-repeat"
               fillPatternImage={image}
               fillPatternScaleX={bgScale}
