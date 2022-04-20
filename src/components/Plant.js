@@ -1,15 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image, Group, Text, Circle } from 'react-konva';
 import useImage from 'use-image';
-
-const contentful = require('contentful');
-
-const client = contentful.createClient({
-  // This is the space ID. A space is like a project folder in Contentful terms
-  space: "1hpnntply6oj",
-  // This is the access token for this space. Normally you get both ID and the token in the Contentful web app
-  accessToken: process.env.REACT_APP_CONTENTFUL
-});
+import client from '../lib/strapiClient'
 
 const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, blocksize, asHTML, setDragged }) => {
   const [imageData, setImageData] = useState()
@@ -29,20 +21,24 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
     return null
   }
 
-  const onSelect = () => {
+  const handleSelect = () => {
     selectShape(plant.id);
   }
 
   const handleDragStart = (e) => {
-    setDragged(e.target.id)
     console.log('dragging: ', e.target.id)
+    setDragged(e.target.id)
   }
 
   const handleDragEnd = (e) => {
-    console.log('handling drop')
-    console.log({e})
+    console.log('handling drop: ', e)
+    console.log('blocksize: ', blocksize)
+    console.log('scale: ', scale)
+    console.log('e.target.attrs.x: ', e.target.attrs.x)
+    console.log('e.target.attrs.y: ', e.target.attrs.y)
+    console.log('x will be: ', Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale))
+    console.log('y will be: ', Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale))
     setIsDragging(false)
-    console.log(e.target.attrs)
     onChange({
       ...plant,
       x: Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale),
@@ -93,8 +89,8 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
       y={y}
       height={(height/10) * scale + 10}
       width={(width/10) * scale + 10}
-      onClick={onSelect}
-      onTap={onSelect}
+      onClick={handleSelect}
+      onTap={handleSelect}
       onDragStart={() => setIsDragging(true)}
       onDragEnd={(e) => handleDragEnd(e)}
       draggable 

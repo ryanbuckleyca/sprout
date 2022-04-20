@@ -1,14 +1,18 @@
-import React, {useEffect, useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
-import useImage from 'use-image';
+import uuid from 'react-uuid';
 import { sortBy } from 'lodash'
+import useImage from 'use-image';
+
+import { GardenProvider } from './GardenContext'
 
 import useWindowSize from './lib/useWindowSize'
+import client from './lib/strapiClient'
+import {setSpeciesVarietiesToPlants, setSpeciesToPlants} from './lib/dataParsers'
 
 import Sidebar from './components/Sidebar'
 import Plant from './components/Plant'
 import Grid from './components/Grid'
-import uuid from 'react-uuid';
 
 const height = window.innerHeight
 const width = window.innerWidth
@@ -17,15 +21,6 @@ const blocksize = 18
 const ratio = 2/3
 
 console.log({scale})
-
-const contentful = require('contentful')
-
-const client = contentful.createClient({
-  // This is the space ID. A space is like a project folder in Contentful terms
-  space: "1hpnntply6oj",
-  // This is the access token for this space. Normally you get both ID and the token in the Contentful web app
-  accessToken: process.env.REACT_APP_CONTENTFUL
-})
 
 const App = () => {
   // const [tiles, setTiles] = useState(initialTiles);
@@ -36,35 +31,7 @@ const App = () => {
   const [image] = useImage("http://images.ctfassets.net/1hpnntply6oj/6Iv7x3k7kivzWto60zp2ry/15b722b5557237a95fbef453be0de0d9/bed_map.png");
   const { height, width } = useWindowSize()
 
-  const setSpeciesVarietiesToPlants = (s) => {
-    s.fields.varieties.forEach((variety) => {
-      const { plantProfile: speciesPlantProfile, ...speciesFields } = s.fields || {}
-      const { species, plantProfile: varietyPlantProfile, ...varietyFields } = variety.fields || {}
-      const plant = {
-        id: uuid(),
-        entityId: variety?.sys?.id || s?.sys?.id,
-        type: 'variety',
-        ...speciesPlantProfile?.fields,
-        ...speciesFields,
-        ...varietyPlantProfile?.fields,
-        ...varietyFields
-      }
-      setPlants((plants) => [...plants, plant])
-    })
-  }
-  const setSpeciesToPlants = (s) => {
-    const { plantProfile, ...speciesFields } = s.fields || {}
-    const plant = {
-      id: uuid(),
-      entityId: s.sys?.id,
-      type: 'species',
-      ...plantProfile?.fields,
-      ...speciesFields,
-    }
-    setPlants((plants) => [...plants, plant])
-}
-
-  // This API call will request an entry with the specified ID from the space defined at the top, using a space-specific access token.
+    // This API call will request an entry with the specified ID from the space defined at the top, using a space-specific access token.
   useEffect(() => {
     const processEntries = (response) => {
       const species = response.items.filter((item) => (
@@ -72,16 +39,18 @@ const App = () => {
       ))
       species.forEach((s) => {
         s.fields.varieties?.length > 0 
-          ? setSpeciesVarietiesToPlants(s)
-          : setSpeciesToPlants(s) 
+          ? setSpeciesVarietiesToPlants(s, setPlants)
+          : setSpeciesToPlants(s, setPlants) 
       })
     }  
-  
+
     setPlants([])
     client.getEntries().then(processEntries).catch(console.error)
-  }, [])
+  }, [setPlants])
+  
 
   const checkDeselect = (e) => {
+    // @TODO: deselect isn't working
     // deselect when clicked on empty area
     console.log('user clicked on: ', e.target)
     const clickedOnEmpty = e.target === e.target.getStage();
@@ -89,7 +58,7 @@ const App = () => {
       selectShape(null);
     }
   };
-
+  
   const handleDrop = (e) => {
     e.preventDefault(); 
     if(e.target.nodeName === 'CANVAS') {
@@ -101,79 +70,91 @@ const App = () => {
     }
   }
 
+  const handleChange = (newAttrs, plantIndex) => {
+    console.log({newAttrs})
+    setPlantedItems((prevArray) => {
+      prevArray[plantIndex] = newAttrs;  
+      // @TODO: bug, plant will not snap back to previous gridpoint if it's the same value
+      // possible fix, check if values are the same and then undo move?
+      return [...sortBy([...prevArray], ['y', 'x'])]
+    })
+  }
+
+  const garden = {
+    plants,
+    setPlants
+  }
+
   const bgScale = Math.min(window.innerWidth / image?.width, window.innerHeight / image?.height)
 
   return (
-    <div
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={handleDrop}
-      style={{
-        position: 'relative', 
-        width: width, 
-        height: height, 
-        overflow: 'hidden'
-      }}
-    >
-      <Stage
-        width={width}
-        height={height}
-        onMouseDown={checkDeselect}
-        onTouchStart={checkDeselect}
+    <GardenProvider garden={garden}>
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+        style={{
+          position: 'relative', 
+          width: width, 
+          height: height, 
+          overflow: 'hidden'
+        }}
       >
-        {image && (
+        <Stage
+          width={width}
+          height={height}
+          onMouseDown={checkDeselect}
+          onTouchStart={checkDeselect}
+        >
+          {image && (
+            <Layer>
+              <Rect
+                x={0}
+                y={0}
+                width={width}
+                height={height}
+                fillPatternRepeat="no-repeat"
+                fillPatternImage={image}
+                fillPatternScaleX={bgScale}
+                fillPatternScaleY={bgScale}
+                draggable={false}
+              />
+            </Layer>
+          )}
           <Layer>
-            <Rect
-              x={0}
-              y={0}
-              width={width}
-              height={height}
-              fillPatternRepeat="no-repeat"
-              fillPatternImage={image}
-              fillPatternScaleX={bgScale}
-              fillPatternScaleY={bgScale}
-              draggable={false}
-            />
+            <Grid blocksize={blocksize} scale={scale} />
           </Layer>
-        )}
-        <Layer>
-          <Grid blocksize={blocksize} scale={scale} />
-        </Layer>
-        {console.log({plants, plantedItems})}
-        <Layer>
-          {plantedItems.map((plant, i) => (
-            <Plant
-              key={i}
-              x={plant.x}
-              y={plant.y}
-              scale={scale}
-              ratio={ratio}
-              blocksize={blocksize}
-              plant={plant}
-              asHTML={false}
-              selectShape={selectShape}
-              setDragged={setDragged}
-              selectedId={selectedId}
-              onChange={(newAttrs) => {
-                console.log({newAttrs})
-                const imgs = plantedItems.slice();
-                imgs[i] = newAttrs;
-                setPlantedItems(sortBy(imgs, ['y', 'x']));
-              }}
-            />
-          ))}
-        </Layer>
-      </Stage>
-      <Sidebar
-        plants={plants}
-        ratio={ratio}
-        setDragged={setDragged}
-        selectedId={selectedId}
-        selectShape={selectShape}
-        setPlants={setPlants}
-        scale={scale}
-        blocksize={blocksize}
-      />
-    </div>
+          {console.log({plants, plantedItems})}
+          <Layer>
+            {plantedItems.map((plant, i) => (
+              <Plant
+                key={i}
+                x={plant.x}
+                y={plant.y}
+                scale={scale}
+                ratio={ratio}
+                blocksize={blocksize}
+                plant={plant}
+                asHTML={false}
+                selectShape={selectShape}
+                setDragged={setDragged}
+                selectedId={selectedId}
+                onChange={(newAttrs) => handleChange(newAttrs, i)}
+              />
+            ))}
+          </Layer>
+        </Stage>
+        <Sidebar
+          plants={plants}
+          ratio={ratio}
+          setDragged={setDragged}
+          selectedId={selectedId}
+          selectShape={selectShape}
+          setPlants={setPlants}
+          scale={scale}
+          blocksize={blocksize}
+        />
+      </div>
+    </GardenProvider>
   );
 };
 
