@@ -3,10 +3,11 @@ import { Image, Group, Text, Circle } from 'react-konva';
 import useImage from 'use-image';
 import client from '../lib/strapiClient'
 
-const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, blocksize, asHTML, setDragged }) => {
+const Plant = ({ x, y, blocksize, scale, ratio, onChange, plant, setSelectedCanvasId, selectedCanvasId, setSelectedInventoryId, selectedInventoryId, asHTML, setCanvasDraggingId, canvasDraggingId, setPlantedItems, plantedItems, handleDragFromSidebar }) => {
+  // const { blocksize, scale, ratio } = useGarden() 
+  // @TODO: why are useGarden values undefined when a new plant is dropped?
   const [imageData, setImageData] = useState()
   const [image] = useImage(imageData?.fields?.file?.url);
-  const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
     const sprite = plant?.uniqueSprite?.fields?.harvest?.sys?.id
@@ -21,29 +22,32 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
     return null
   }
 
-  const handleSelect = () => {
-    selectShape(plant.id);
+  const handleSelect = (e) => {
+    console.log('selected: ', e)
   }
 
-  const handleDragStart = (e) => {
-    console.log('dragging: ', e.target.id)
-    setDragged(e.target.id)
-  }
+  const handleCanvasDragEnd = (e) => {
+    const newX = Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale)
+    const newY = Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale)
 
-  const handleDragEnd = (e) => {
-    console.log('handling drop: ', e)
-    console.log('blocksize: ', blocksize)
-    console.log('scale: ', scale)
-    console.log('e.target.attrs.x: ', e.target.attrs.x)
-    console.log('e.target.attrs.y: ', e.target.attrs.y)
-    console.log('x will be: ', Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale))
-    console.log('y will be: ', Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale))
-    setIsDragging(false)
-    onChange({
-      ...plant,
-      x: Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale),
-      y: Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale),
+    setPlantedItems((prevArray) => {
+      const movedPlant = prevArray.find((p) => p.id === selectedCanvasId)
+      console.log('plant was at (x,y): ', movedPlant.x, movedPlant.y)
+      console.log('plant was dropped at (x,y): ', e.target.attrs.x, e.target.attrs.y)
+
+      if (movedPlant.x === newX && movedPlant.y === newY) {
+        return [...prevArray]
+        // @TODO: bug, plant will not snap back to previous gridpoint if it's the same value
+        // possible fix, check if values are the same and then undo move?
+      }
+      movedPlant.x = newX
+      movedPlant.y = newY
+      console.log('plant is now at (x,y): ', newX, newY)
+
+      return [...prevArray]
     })
+    // @TODO: bug, plants can be seen shuffling when array reorders for layering
+    setCanvasDraggingId(undefined)
   }
 
   const { height, width } = imageData?.fields?.file?.details?.image || {}
@@ -53,7 +57,7 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
       <div 
         id={plant.entityId} 
         draggable={true} 
-        onDragStart={handleDragStart} 
+        onDragStart={handleDragFromSidebar} 
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -91,13 +95,13 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
       width={(width/10) * scale + 10}
       onClick={handleSelect}
       onTap={handleSelect}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={(e) => handleDragEnd(e)}
+      onDragStart={() => setSelectedCanvasId(plant.id)}
+      onDragEnd={(e) => handleCanvasDragEnd(e)}
       draggable 
     >
       <PlantShadow
-        isDragging={isDragging}
-        isSelected={selectedId === plant.id}
+        isCanvasDragging={canvasDraggingId === plant.id}
+        isSelected={selectedCanvasId === plant.id}
         blocksize={blocksize}
         size={plant.inchSpacing}
         ratio={ratio}
@@ -122,7 +126,7 @@ const Plant = ({ x, y, onChange, plant, ratio, selectShape, scale, selectedId, b
   )
 };
 
-const PlantShadow = ({blocksize, scale, isDragging, isSelected, size, ratio}) => {
+const PlantShadow = ({ isCanvasDragging, isSelected, size, blocksize, scale, ratio }) => {
   return (
     <Circle
       x={blocksize * scale * 1}
@@ -132,7 +136,7 @@ const PlantShadow = ({blocksize, scale, isDragging, isSelected, size, ratio}) =>
       fill='#000'
       opacity={0.3}
       strokeWidth={3}
-      visible={isDragging || isSelected}
+      visible={isCanvasDragging || isSelected}
     />
   )
 }

@@ -1,14 +1,21 @@
 import React from 'react';
 import Plant from './Plant';
 import { useRef, useState } from 'react'
+import { useGarden } from '../GardenContext'
 
-const Sidebar = ({plants, ratio, selectedId, selectShape, setPlants, scale, blocksize, setDragged}) => {
+const Sidebar = ({ ratio, selectedInventoryId, setSelectedInventoryId, scale, blocksize }) => {
   const [expanded, setExpanded] = useState(false)
+  const { plants } = useGarden()
   const sidebarRef = useRef()
 
   const toggleSidebar = () => {
     setExpanded((expanded) => !expanded)
     sidebarRef.current.classList.toggle('collapsed')
+  }
+
+  const handleDragFromSidebar = (e) => {
+    console.log('dragging from sidebar: ', e.target.id)
+    setSelectedInventoryId(e.target.id)
   }
 
   return (
@@ -51,9 +58,9 @@ const Sidebar = ({plants, ratio, selectedId, selectShape, setPlants, scale, bloc
             blocksize={blocksize}
             plant={plant}
             asHTML={true}
-            selectShape={selectShape}
-            setDragged={setDragged}
-            selectedId={selectedId}
+            handleDragFromSidebar={handleDragFromSidebar}
+            setSelectedInventoryId={setSelectedInventoryId}
+            selectedInventoryId={selectedInventoryId}
           />
         ))}
       </div>

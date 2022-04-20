@@ -24,14 +24,15 @@ console.log({scale})
 
 const App = () => {
   // const [tiles, setTiles] = useState(initialTiles);
-  const [selectedId, selectShape] = useState(null);
-  const [draggedId, setDragged] = useState(null);
+  const [selectedCanvasId, setSelectedCanvasId] = useState()
+  const [selectedInventoryId, setSelectedInventoryId] = useState()
+  const [canvasDraggingId, setCanvasDraggingId] = useState()
   const [plants, setPlants] = useState([])
   const [plantedItems, setPlantedItems] = useState([])
   const [image] = useImage("http://images.ctfassets.net/1hpnntply6oj/6Iv7x3k7kivzWto60zp2ry/15b722b5557237a95fbef453be0de0d9/bed_map.png");
   const { height, width } = useWindowSize()
 
-    // This API call will request an entry with the specified ID from the space defined at the top, using a space-specific access token.
+  // process plant data on page load
   useEffect(() => {
     const processEntries = (response) => {
       const species = response.items.filter((item) => (
@@ -47,6 +48,10 @@ const App = () => {
     setPlants([])
     client.getEntries().then(processEntries).catch(console.error)
   }, [setPlants])
+
+  useEffect(() => {
+    console.log('now dragging canvas id: ', canvasDraggingId)
+  }, [canvasDraggingId])
   
 
   const checkDeselect = (e) => {
@@ -55,43 +60,36 @@ const App = () => {
     console.log('user clicked on: ', e.target)
     const clickedOnEmpty = e.target === e.target.getStage();
     if (clickedOnEmpty) {
-      selectShape(null);
+      selectedCanvasId(null);
+      selectedInventoryId(null);
     }
   };
   
-  const handleDrop = (e) => {
+  const handleDropFromSidebar = (e) => {
     e.preventDefault(); 
-    if(e.target.nodeName === 'CANVAS') {
-      const droppedPlant = {...plants.find((p) => p.entityId === draggedId)}
-      droppedPlant.id = uuid()
-      droppedPlant.x = e.clientX
-      droppedPlant.y = e.clientY
-      setPlantedItems((plantedItems) => sortBy([...plantedItems, droppedPlant], ['y', 'x']))
+    if(e.target.nodeName !== 'CANVAS') {
+      return false // don't drop in menu area
     }
-  }
-
-  const handleChange = (newAttrs, plantIndex) => {
-    console.log({newAttrs})
-    setPlantedItems((prevArray) => {
-      prevArray[plantIndex] = newAttrs;  
-      // @TODO: bug, plant will not snap back to previous gridpoint if it's the same value
-      // possible fix, check if values are the same and then undo move?
-      return [...sortBy([...prevArray], ['y', 'x'])]
-    })
+    const droppedPlant = {...plants.find((p) => p.entityId === selectedInventoryId)}
+    // spread found plant data to create new unique version
+    droppedPlant.id = uuid()
+    droppedPlant.x = e.clientX
+    droppedPlant.y = e.clientY
+    setPlantedItems((plantedItems) => [...plantedItems, droppedPlant])
   }
 
   const garden = {
     plants,
-    setPlants
+    setPlants,
   }
 
-  const bgScale = Math.min(window.innerWidth / image?.width, window.innerHeight / image?.height)
+  const bgScale = Math.min(width / image?.width, height / image?.height)
 
   return (
     <GardenProvider garden={garden}>
       <div
         onDragOver={(e) => e.preventDefault()}
-        onDrop={handleDrop}
+        onDrop={handleDropFromSidebar}
         style={{
           position: 'relative', 
           width: width, 
@@ -125,7 +123,7 @@ const App = () => {
           </Layer>
           {console.log({plants, plantedItems})}
           <Layer>
-            {plantedItems.map((plant, i) => (
+            {sortBy(plantedItems, ['y', 'x']).map((plant, i) => (
               <Plant
                 key={i}
                 x={plant.x}
@@ -135,21 +133,18 @@ const App = () => {
                 blocksize={blocksize}
                 plant={plant}
                 asHTML={false}
-                selectShape={selectShape}
-                setDragged={setDragged}
-                selectedId={selectedId}
-                onChange={(newAttrs) => handleChange(newAttrs, i)}
+                setSelectedCanvasId={setSelectedCanvasId}
+                setCanvasDraggingId={setCanvasDraggingId}
+                selectedCanvasId={selectedCanvasId}
+                setPlantedItems={setPlantedItems}
               />
             ))}
           </Layer>
         </Stage>
         <Sidebar
-          plants={plants}
           ratio={ratio}
-          setDragged={setDragged}
-          selectedId={selectedId}
-          selectShape={selectShape}
-          setPlants={setPlants}
+          selectedInventoryId={selectedInventoryId}
+          setSelectedInventoryId={setSelectedInventoryId}
           scale={scale}
           blocksize={blocksize}
         />
