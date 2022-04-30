@@ -9,6 +9,7 @@ const Plant = ({ x, y, blocksize, scale, ratio, onChange, plant, setSelectedCanv
   const [imageData, setImageData] = useState()
   const [image] = useImage(imageData?.fields?.file?.url);
 
+  // set the image once the info about the plant is downloaded
   useEffect(() => {
     const sprite = plant?.uniqueSprite?.fields?.harvest?.sys?.id
       || plant?.defaultSprite?.fields?.harvest?.sys?.id
@@ -26,27 +27,40 @@ const Plant = ({ x, y, blocksize, scale, ratio, onChange, plant, setSelectedCanv
     console.log('selected: ', e)
   }
 
-  const handleCanvasDragEnd = (e) => {
-    const newX = Math.round(e.target.attrs.x / (blocksize * scale)) * (blocksize * scale)
-    const newY = Math.round(e.target.attrs.y / (blocksize * scale)) * (blocksize * scale)
+  const handleCanvasDragStart = (canvasEvent) => {
+    setSelectedCanvasId(plant.id)
+  }
 
+  // when a planted plant is dragged, not related to menu items
+  const handleCanvasDragEnd = (canvasEvent) => {
     setPlantedItems((prevArray) => {
+      // get the plant was dragged
       const movedPlant = prevArray.find((p) => p.id === selectedCanvasId)
-      console.log('plant was at (x,y): ', movedPlant.x, movedPlant.y)
-      console.log('plant was dropped at (x,y): ', e.target.attrs.x, e.target.attrs.y)
 
-      if (movedPlant.x === newX && movedPlant.y === newY) {
-        return [...prevArray]
-        // @TODO: bug, plant will not snap back to previous gridpoint if it's the same value
-        // possible fix, check if values are the same and then undo move?
-      }
+      // console.log('movedPlant: ', movedPlant.name, movedPlant.id)
+      // console.log('selectedCanvasId: ', selectedCanvasId)
+      // console.log(selectedCanvasId, movedPlant)
+      
+      // get the location of where plant was dropped
+      const { x, y } = canvasEvent.target.attrs
+      const sizer = blocksize * scale
+  
+      // which way was the plant moved, so we can round to the next nearest block
+      const xDir = movedPlant.x - x // if < 0 ? movedUp : movedDown
+      const yDir = movedPlant.y - y // if < 0 ? movedUp : movedDown  
+      const newX = (xDir < 0 ? Math.ceil(x / sizer) : Math.floor(x / sizer)) * sizer
+      const newY = (yDir < 0 ? Math.ceil(y / sizer) : Math.floor(y / sizer)) * sizer
+      
+      // set plant location to closest snap point
       movedPlant.x = newX
       movedPlant.y = newY
-      console.log('plant is now at (x,y): ', newX, newY)
 
+      // React renders stacking order based on the place in the array
+      // move higher x and y values to the top of the list so they appear in front
+      prevArray.sort((a, b) => (a.y - b.y || a.x - b.x))
+  
       return [...prevArray]
     })
-    // @TODO: bug, plants can be seen shuffling when array reorders for layering
     setCanvasDraggingId(undefined)
   }
 
@@ -95,8 +109,8 @@ const Plant = ({ x, y, blocksize, scale, ratio, onChange, plant, setSelectedCanv
       width={(width/10) * scale + 10}
       onClick={handleSelect}
       onTap={handleSelect}
-      onDragStart={() => setSelectedCanvasId(plant.id)}
-      onDragEnd={(e) => handleCanvasDragEnd(e)}
+      onDragStart={handleCanvasDragStart}
+      onDragEnd={handleCanvasDragEnd}
       draggable 
     >
       <PlantShadow

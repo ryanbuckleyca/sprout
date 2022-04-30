@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import uuid from 'react-uuid';
-import { sortBy } from 'lodash'
+import { orderBy } from 'lodash'
 import useImage from 'use-image';
 
 import { GardenProvider } from './GardenContext'
@@ -32,7 +32,7 @@ const App = () => {
   const [image] = useImage("http://images.ctfassets.net/1hpnntply6oj/6Iv7x3k7kivzWto60zp2ry/15b722b5557237a95fbef453be0de0d9/bed_map.png");
   const { height, width } = useWindowSize()
 
-  // process plant data on page load
+  // process plant data from API on page load
   useEffect(() => {
     const processEntries = (response) => {
       const species = response.items.filter((item) => (
@@ -49,24 +49,19 @@ const App = () => {
     client.getEntries().then(processEntries).catch(console.error)
   }, [setPlants])
 
-  useEffect(() => {
-    console.log('now dragging canvas id: ', canvasDraggingId)
-  }, [canvasDraggingId])
-  
-
   const checkDeselect = (e) => {
     // @TODO: deselect isn't working
     // deselect when clicked on empty area
     console.log('user clicked on: ', e.target)
-    const clickedOnEmpty = e.target === e.target.getStage();
+    const clickedOnEmpty = e.target === e.target.getStage()
     if (clickedOnEmpty) {
-      selectedCanvasId(null);
-      selectedInventoryId(null);
+      selectedCanvasId(null)
+      selectedInventoryId(null)
     }
-  };
+  }
   
   const handleDropFromSidebar = (e) => {
-    e.preventDefault(); 
+    e.preventDefault()
     if(e.target.nodeName !== 'CANVAS') {
       return false // don't drop in menu area
     }
@@ -121,17 +116,17 @@ const App = () => {
           <Layer>
             <Grid blocksize={blocksize} scale={scale} />
           </Layer>
-          {console.log({plants, plantedItems})}
           <Layer>
-            {sortBy(plantedItems, ['y', 'x']).map((plant, i) => (
+            {plantedItems.map((plant) => (
               <Plant
-                key={i}
+                key={plant.id}
                 x={plant.x}
                 y={plant.y}
                 scale={scale}
                 ratio={ratio}
                 blocksize={blocksize}
                 plant={plant}
+                plantedItems={plantedItems}
                 asHTML={false}
                 setSelectedCanvasId={setSelectedCanvasId}
                 setCanvasDraggingId={setCanvasDraggingId}
