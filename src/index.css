@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import 'react-tippy/dist/tippy.css';
 
 body {
   margin: 0;
@@ -20,5 +21,12 @@ code {
 }
 .sidebar.collapsed {
   transform: translateX(260px);
+  position: absolute;
+}
+.menu {
+  transition: all .5s;
+}
+.menu.collapsed {
+  transform: translateX(0px);
   position: absolute;
 }

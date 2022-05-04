@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import uuid from 'react-uuid';
-import { orderBy } from 'lodash'
+import Menu from './components/Menu';
 import useImage from 'use-image';
 
 import { GardenProvider } from './GardenContext'
@@ -82,14 +82,22 @@ const App = () => {
 
   return (
     <GardenProvider garden={garden}>
+      <Menu
+        ratio={ratio}
+        selectedInventoryId={selectedInventoryId}
+        setSelectedInventoryId={setSelectedInventoryId}
+        scale={scale}
+        blocksize={blocksize}
+      />
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropFromSidebar}
         style={{
-          position: 'relative', 
+          position: 'absolute', 
           width: width, 
           height: height, 
-          overflow: 'hidden'
+          overflow: 'hidden',
+          right: 0,
         }}
       >
         <Stage

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { MENU_WIDTHS } from '../components/Menu'
 
 export const useWindowSize = () => {
   const [windowSize, setWindowSize] = useState({
@@ -11,7 +12,7 @@ export const useWindowSize = () => {
   useEffect(() => {
     const handleResize = () =>
       setWindowSize({
-        width: window.innerWidth,
+        width: window.innerWidth - MENU_WIDTHS.COLLAPSED,
         height: window.innerHeight,
         isMobile: window.innerWidth < 768,
         isTablet: window.innerWidth < 1024,
